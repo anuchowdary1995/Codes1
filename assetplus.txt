@@ -1,0 +1,101 @@
+as<-read.csv("D:/asset_plus/New folder/mergedfile_assetplus1.csv")
+View(as)
+ass<-as[,-c(80,79,78,77)]
+View(ass)
+#data preparation
+names(ass)
+# every null value replace to 0
+ass[is.na(ass)] = 0
+assnew<-ass[,-c(38,41,44,49,51,54,59,60)]
+View(assnew)
+length(which(is.na(assnew))) #Hence,there are no missing values
+str(as)
+
+
+
+#those varibles are converting into numaric
+#ageing
+assnew$Ageing<-as.factor(assnew$Ageing)
+assnew$Ageing<-unclass(assnew$Ageing)
+assnew$Ageing<-as.numeric(assnew$Ageing)
+#gender
+assnew$Gender<-as.factor(assnew$Gender)
+assnew$Gender<-unclass(assnew$Gender)
+assnew$Gender<-as.numeric(assnew$Gender)
+#income group
+assnew$Income.Group<-as.factor(assnew$Income.Group)
+assnew$Income.Group<-unclass(assnew$Income.Group)
+assnew$Income.Group<-as.numeric(assnew$Income.Group)
+#marital status
+assnew$Marital.Status<-as.factor(assnew$Marital.Status)
+assnew$Marital.Status<-unclass(assnew$Marital.Status)
+assnew$Marital.Status<-as.numeric(assnew$Marital.Status)
+#postal division
+assnew$Postal.Division<-as.factor(assnew$Postal.Division)
+assnew$Postal.Division<-unclass(assnew$Postal.Division)
+assnew$Postal.Division<-as.numeric(assnew$Postal.Division)
+#profession
+assnew$Profession<-as.factor(assnew$Profession)
+assnew$Profession<-unclass(assnew$Profession)
+assnew$Profession<-as.numeric(assnew$Profession)
+#status
+assnew$Status<-as.factor(assnew$Status)
+assnew$Status<-unclass(assnew$Status)
+assnew$Status<-as.numeric(assnew$Status)
+#state
+assnew$State<-as.factor(assnew$State)
+assnew$State<-unclass(assnew$State)
+assnew$State<-as.numeric(assnew$State)
+#signup.date
+assnew$Signup.Date<-as.numeric(assnew$Signup.Date)
+assnew$Start.Date<-as.numeric(assnew$Start.Date)
+View(assnew)
+assnew$Debt.Equity<-unclass(assnew$Debt.Equity)
+assnew$Debt.Equity<-as.numeric(assnew$Debt.Equity)
+##Scaling of data, to get them in to a range
+subass<-data.frame(scale(assnew))
+str(assnew)
+View(subass)
+#clusturing
+subass[is.na(subass)] = 0
+#To check for k value based on the variances of the values with in the cluster
+wssplot <- function(subass, nc=68, seed=1234){
+  wss <- (nrow(subass)-2)*sum(apply(subass,2,var))
+  for (i in 4:nc){
+    set.seed(seed)
+    wss[i] <- sum(kmeans(subass, centers=i)$withinss)}
+  plot(1:nc, wss, type="b", xlab="Number of Clusters",
+       ylab="Within groups sum of squares")}
+
+wssplot(subass,nc=68) 
+
+
+library("factoextra")
+fviz_nbclust(subass, kmeans, method = "gap_stat")
+
+
+
+
+#kmeans clustering
+km = kmeans(subass,5)
+
+#gave better insights
+clusplot(assetplus, km$cluster,color=TRUE, shade=TRUE,
+         labels=4, lines=0, main="K-means cluster plot")
+
+# that clusters  have to add main data because we can easy to analysis 
+assetplus<-read.csv("D:/asset_plus/New folder/mergedfile_assetplus1.csv")
+assetplus$km = km$cluster
+View(assetplus)
+
+mosaicplot(table(assetplus$Gender,assetplus$km))
+boxplot(assetplus$Total.Balanced~assetplus$km)
+
+#factors
+set.seed(1)
+fc<-factanal(subass,factors = 5,rotation = "varimax",scores = "regression")
+View(fc)
+fc$loadings
+
+new_finding <- cbind(assetplus,fc$scores)
+View(new_finding)
