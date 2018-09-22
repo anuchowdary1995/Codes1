@@ -1,0 +1,81 @@
+data<-read.csv("C:/Users/Anusha/Desktop/diabetes.csv")
+View(data)
+
+#culster kmeans
+newdata=data.frame(scale(data[,1:9]))
+kclut=kmeans(newdata,4)
+data$kclust=kclut$cluster
+View(data)
+table(data$Outcome,data$kclust)
+plot(data$kclust)
+
+#plot to seeing the varibles
+names(data)
+
+var_list<-c("Pregnancies","Glucose" ,"BloodPressure","SkinThickness","Insulin","BMI","DiabetesPedigreeFunction" ,"Age","kclust")
+library(popbio)
+for(var in var_list){
+  logi.hist.plot(data[,var],data$Outcome)
+}
+
+
+for(var1 in var_list){
+  boxplot(data[,var1],data$Outcome)
+}
+
+
+#split the data set into train and test
+set.seed(10)
+index<-sample(1:nrow(data),round(nrow(data)*0.7),replace=F)
+traindata=data[index,]
+testdata=data[-index,]
+#bulid the model
+class(traindata$Outcome)
+View(traindata)
+#bulid the model 
+m<-glm(Outcome ~ Pregnancies+Glucose+BMI+DiabetesPedigreeFunction+Age+kclust,data=traindata)
+summary(m)
+# predict 
+traindata$predt<-predict(m,type="response")
+#roc of auc
+library(ROCR)
+predt <- prediction(traindata$predt,traindata$Outcome)
+roc.perf = performance(predt, measure = "tpr", x.measure = "fpr")
+plot(roc.perf,colorize=T)
+#area under curve
+auc = performance(predt, measure = "auc")
+auc@y.values[[1]]  #0.84
+#creating the thershold value
+traindata$predtn<-ifelse(traindata$predt>0.37,1,0)
+#confusion matrix
+library(caret)
+library(e1071)
+confusionMatrix(factor(traindata$predtn),factor(traindata$Outcome)) #0.77
+#plot the prediction vs target
+library(popbio)
+logi.hist.plot(traindata$predt,traindata$Outcome)
+#somrsD
+library(InformationValue)
+somersD(traindata$Outcome,traindata$predt) #0.68
+#hoslem.test
+library(ResourceSelection)
+hoslem.test(traindata$Outcome,traindata$predt) #p-value-0.8
+
+# test data
+
+n<-glm(Outcome ~ Pregnancies+Glucose+BMI+DiabetesPedigreeFunction+Age+kclust,data=testdata)
+summary(n)
+#predictions
+testdata$predts<-predict(n,type="response")
+# thershold
+testdata$predts<-ifelse(testdata$predts>0.37,1,0)
+# confusion matrix
+confusionMatrix(factor(testdata$predts),factor(testdata$Outcome))
+
+#cross validation
+data$Outcome<-as.factor(data[,"Outcome"]) 
+cvctrl2<-trainControl(method = "cv", number = 10)
+fit2<- train(Outcome ~ Pregnancies+Glucose+BMI+DiabetesPedigreeFunction+Age+kclust,data,
+             method = "glm",family=binomial(), trControl = cvctrl2,  metric="Accuracy")
+fit2
+
